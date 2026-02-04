@@ -1,0 +1,254 @@
+- id: PHISH-001
+  title: "Urgency / Threat language"
+  weight: 10
+  severity: "medium"
+  when:
+    any_keywords:
+      - "דחוף"
+      - "מייד"
+      - "מיידי"
+      - "החשבון ייחסם"
+      - "החשבון יינעל"
+      - "תוך 24 שעות"
+      - "urgent"
+      - "immediately"
+      - "within 24 hours"
+  explain: "שפה דחופה/מאיימת היא טריגר קלאסי לפישינג."
+  action: "verify_out_of_band"
+  tags: ["social_engineering"]
+
+- id: PHISH-002
+  title: "Authority impersonation"
+  weight: 8
+  severity: "medium"
+  when:
+    patterns:
+      - type: keyword
+        value: "מחלקת IT"
+        label: "authority"
+      - type: keyword
+        value: "תמיכה טכנית"
+        label: "authority"
+      - type: keyword
+        value: "מנהל מערכת"
+        label: "authority"
+      - type: regex
+        value: '\b(it\s*support|security\s*team|helpdesk|microsoft\s*support|paypal\s*support)\b'
+        flags: "im"
+        label: "authority_regex"
+  explain: "התחזות לסמכות (IT/בנק/תמיכה) היא דפוס נפוץ בהונאות."
+  action: "verify_out_of_band"
+  tags: ["social_engineering"]
+
+- id: PHISH-003
+  title: "Reward / prize / refund bait"
+  weight: 8
+  severity: "medium"
+  when:
+    any_keywords:
+      - "זכית"
+      - "החזר כספי"
+      - "מתנה"
+      - "Gift card"
+      - "refund"
+      - "reward"
+      - "prize"
+  explain: "פיתיון של פרס/החזר הוא שיטה נפוצה להוביל לקליק/מסירת פרטים."
+  action: "verify_out_of_band"
+  tags: ["social_engineering"]
+
+- id: PHISH-004
+  title: "Fear / legal / police scare"
+  weight: 9
+  severity: "medium"
+  when:
+    any_keywords:
+      - "משטרה"
+      - "תביעה"
+      - "קנס"
+      - "הפרת זכויות"
+      - "הליכים משפטיים"
+      - "legal action"
+      - "lawsuit"
+  explain: "הפחדה משפטית/משטרתית נועדה לגרום לפעולה מהירה בלי לחשוב."
+  action: "verify_out_of_band"
+  tags: ["social_engineering"]
+
+- id: PHISH-005
+  title: "Credential / OTP / payment card request"
+  weight: 18
+  severity: "high"
+  when:
+    patterns:
+      - type: regex
+        value: '\b(password|passcode|otp|2fa|two[- ]factor|verification code|one[- ]time)\b'
+        flags: "im"
+        label: "cred_terms_en"
+      - type: regex
+        value: '\b(סיסמ(?:ה|א)|קוד\s*אימות|קוד\s*חד[- ]פעמי|אימות\s*דו[- ]שלבי|פרטי\s*אשראי|CVV)\b'
+        flags: "im"
+        label: "cred_terms_he"
+  explain: "בקשה לסיסמה/OTP/פרטי אשראי היא אינדיקציה חזקה לפישינג."
+  action: "block"
+  tags: ["credential_theft"]
+
+- id: PHISH-006
+  title: "URL shortener"
+  enabled: false  # Disabled: replaced by CTX-URL-SHORTENER (extractor-based, more accurate)
+  weight: 14
+  severity: "high"
+  when:
+    regex:
+      - 'https?://(?:bit\.ly|tinyurl\.com|t\.co|goo\.gl|ow\.ly|is\.gd|buff\.ly|cutt\.ly)/\S+'
+  explain: "קישורים מקוצרים מסתירים את היעד ומעלים סיכון."
+  action: "block"
+  tags: ["links"]
+
+- id: PHISH-007
+  title: "Lookalike / typosquatting brand domains"
+  weight: 16
+  severity: "high"
+  when:
+    regex:
+      - '(?i)\b(micros0ft|rnicrosoft|paypaI|paypai|go0gle|g00gle|faceb00k|app1e|amaz0n)\b'
+  explain: "דומיינים 'דומים' (אותיות/ספרות מוחלפות) הם טכניקה נפוצה להטעיה."
+  action: "block"
+  tags: ["links"]
+
+- id: PHISH-008
+  title: "Punycode / IDN suspicious"
+  enabled: false  # Disabled: replaced by CTX-URL-PUNYCODE (extractor-based, more accurate)
+  weight: 12
+  severity: "high"
+  when:
+    regex:
+      - '(?i)https?://[^\s/]*xn--[^\s/]+'
+  explain: "Punycode (xn--) בדומיין יכול להעיד על ניסיונות התחזות/IDN."
+  action: "block"
+  tags: ["links"]
+
+- id: PHISH-009
+  title: "URL obfuscation / suspicious structure"
+  weight: 10
+  severity: "medium"
+  when:
+    patterns:
+      - type: regex
+        value: 'https?://[^/\s]+@[^ \t\r\n/]+'
+        flags: "im"
+        label: "userinfo_in_url"
+      - type: regex
+        value: 'https?://(?:[^/\s]+\.){4,}[^/\s/]+'
+        flags: "im"
+        label: "too_many_subdomains"
+      - type: regex
+        value: 'https?://\S{80,}'
+        flags: "im"
+        label: "very_long_url"
+  explain: "מבנה URL חשוד (userinfo/@, הרבה תתי-דומיינים, URL ארוך מאוד) מעלה סיכון."
+  action: "verify_out_of_band"
+  tags: ["links"]
+
+- id: PHISH-010
+  title: "HTTP (no TLS) in login/verify context"
+  weight: 12
+  severity: "high"
+  when:
+    match: "all"
+    patterns:
+      - type: regex
+        value: 'http://\S+'
+        flags: "im"
+        label: "http_link"
+      - type: regex
+        value: '\b(login|sign\s*in|verify|account|password|אימות|כניסה|חשבון|סיסמ(?:ה|א))\b'
+        flags: "im"
+        label: "login_context"
+  explain: "קישור http:// יחד עם הקשר של כניסה/אימות הוא סימן חזק להונאה."
+  action: "block"
+  tags: ["links", "credential_theft"]
+
+- id: PHISH-011
+  title: "From / Reply-To mismatch (header text heuristic)"
+  weight: 14
+  severity: "high"
+  when:
+    regex:
+      - '(?is)\bfrom:\s*.*?@([a-z0-9.-]+).*?\breply-to:\s*.*?@(?!\1)([a-z0-9.-]+)'
+  explain: "אי התאמה בין From ל-Reply-To היא טריק נפוץ להפניית תשובה לתוקף."
+  action: "verify_out_of_band"
+  tags: ["sender"]
+
+- id: PHISH-012
+  title: "Free email provider while claiming org authority (heuristic)"
+  weight: 9
+  severity: "medium"
+  when:
+    match: "all"
+    patterns:
+      - type: regex
+        value: '(?i)\bfrom:\s*.*?@(gmail\.com|yahoo\.com|outlook\.com|hotmail\.com|proton\.me|protonmail\.com)\b'
+        flags: "im"
+        label: "free_provider"
+      - type: regex
+        value: '\b(מחלקת|תמיכה|IT|support|בנק|finance|חשבונאות|payroll)\b'
+        flags: "im"
+        label: "org_claim"
+  explain: "שולח מ-providers חינמיים שמציג עצמו כגוף ארגוני/רשמי הוא דגל צהוב."
+  action: "verify_out_of_band"
+  tags: ["sender", "social_engineering"]
+
+- id: PHISH-013
+  title: "Attachment filename trick"
+  weight: 16
+  severity: "high"
+  when:
+    regex:
+      - '(?i)\b[a-z0-9 _.-]+\.(pdf|docx?|xlsx?)\.(exe|scr|js|vbs|bat|cmd)\b'
+      - '(?i)\b[a-z0-9 _.-]+\.(docm|xlsm|pptm)\b'
+      - '(?i)\b(secure|invoice|document|scan|photo)[a-z0-9 _.-]*\.(zip|rar|7z|img|iso)\b'
+  explain: "שמות קבצים מטעים (double extension / מאקרו) הם אינדיקציה חזקה לקובץ זדוני."
+  action: "block"
+  tags: ["attachments"]
+
+- id: PHISH-014
+  title: "Payment instruction / bank details"
+  weight: 15
+  severity: "high"
+  when:
+    patterns:
+      - type: keyword
+        value: "העבר תשלום"
+        label: "payment_he"
+      - type: keyword
+        value: "פרטי חשבון"
+        label: "payment_he"
+      - type: regex
+        value: '\b(IBAN|SWIFT|wire transfer|bank account|crypto wallet|wallet address)\b'
+        flags: "im"
+        label: "payment_en"
+  explain: "הנחיות תשלום/פרטי בנק/ארנק קריפטו בהודעה לא צפויה מצביעים על הונאה."
+  action: "verify_out_of_band"
+  tags: ["payment_fraud"]
+
+- id: PHISH-015
+  title: "Unusual formatting indicators"
+  weight: 6
+  severity: "low"
+  when:
+    patterns:
+      - type: regex
+        value: '!!!+'
+        flags: "m"
+        label: "excessive_exclamation"
+      - type: regex
+        value: '\b[A-Z]{6,}\b'
+        flags: "m"
+        label: "all_caps"
+      - type: regex
+        value: '[\u200b\u200c\u200d\ufeff]'
+        flags: "m"
+        label: "zero_width_chars"
+  explain: "פורמט חריג (!!!, CAPS מוגזם, תווים חבויים) הוא סיגנל חלש אבל שימושי."
+  action: "allow"
+  tags: ["content_quality"]
